@@ -1,0 +1,348 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Image Editor</title>
+    <style>
+        body {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            margin: 0;
+            padding: 20px;
+            background-color: #e9ecef;
+            font-family: 'Arial', sans-serif;
+        }
+
+        h1 {
+            margin-bottom: 20px;
+            color: #343a40;
+            font-size: 2em;
+        }
+
+        .controls {
+			display: flex;
+			justify-content: center;
+			margin-bottom: 20px;
+			flex-wrap: wrap;
+			gap: 20px;
+		}
+
+        .controls > input, .controls > button {
+            margin: 5px;
+            padding: 10px 15px;
+            font-size: 14px;
+            border: 1px solid #6c757d;
+            border-radius: 5px;
+            background-color: #ffffff;
+            transition: background-color 0.3s ease, border 0.3s ease;
+        }
+
+        .controls > button {
+            background-color: #007bff;
+            color: white;
+            cursor: pointer;
+        }
+
+        .controls > button:hover {
+            background-color: #0056b3;
+        }
+
+        #canvas {
+            border: 2px solid #6c757d;
+            cursor: crosshair;
+            margin-bottom: 20px;
+            background-color: #ffffff;
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+        }
+
+        .text-input-container {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+
+        .text-input-container > input, .text-input-container > button {
+            margin-right: 5px;
+            padding: 10px 15px;
+            font-size: 14px;
+            border: 1px solid #6c757d;
+            border-radius: 5px;
+        }
+
+        .text-input-container > button {
+            background-color: #007bff;
+            color: white;
+            cursor: pointer;
+        }
+
+        .text-input-container > button:hover {
+            background-color: #0056b3;
+        }
+
+        .logo-list {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            margin-top: 20px;
+        }
+
+        .logo-list img {
+            cursor: pointer;
+            width: 80px;
+            height: 80px;
+            border: 1px solid transparent;
+            border-radius: 5px;
+            margin: 5px;
+            transition: border 0.3s ease;
+        }
+
+        .logo-list img:hover {
+            border: 2px solid #007bff;
+        }
+
+        .section-title {
+            margin-bottom: 10px;
+            color: #495057;
+            font-size: 1.2em;
+        }
+		input#colorInput {
+    display: inline-block;
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    background-color: #000000;
+    border: 2px solid #ccc;
+    cursor: pointer;
+}
+input#textColorInput {
+    display: inline-block;
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    background-color: #000000;
+    border: 2px solid #ccc;
+    cursor: pointer;
+}
+    </style>
+</head>
+<body>
+    <h1>Image Editor</h1>
+    <div class="controls">
+        <h3 class="section-title">Image Upload</h3>
+        <input type="file" id="fileInput" accept="image/*">
+		
+        <h3 class="section-title">Background Color</h3>
+        <input type="color" id="colorInput" value="#000000">
+        <h3 class="section-title">Text Color</h3>
+        <input type="color" id="textColorInput" value="#000000">
+		
+		
+        <h3 class="section-title">Font Size</h3>
+        <input type="number" id="fontSizeInput" value="45" min="1" placeholder="Font Size">
+        <button id="clearButton">Clear</button>
+        <button id="downloadButton">Download Image</button>
+    </div>
+	<div class="controls">
+	 <canvas id="canvas" width="500" height="500"></canvas>
+	 <div class="design">
+	<div class="text-input-container">
+        <input type="text" id="textInput" placeholder="Enter text" />
+        <button id="addTextButton">Add Text</button>
+    </div>
+    <div class="logo-list">
+        <h3 class="section-title">Logo List</h3>
+        <img src="https://cdn.shopify.com/s/files/1/0904/5262/3636/files/preview-removebg-preview.png?v=1727346863" id="logo1" alt="Logo 1">
+        <img src="https://cdn.shopify.com/s/files/1/0904/5262/3636/files/preview__1_-removebg-preview.png?v=1727346955" id="logo2" alt="Logo 2">
+    </div>
+    </div>
+    </div>
+	
+   
+    
+
+    <script>
+        const canvas = document.getElementById('canvas');
+        const ctx = canvas.getContext('2d');
+        const fileInput = document.getElementById('fileInput');
+        const colorInput = document.getElementById('colorInput');
+        const textColorInput = document.getElementById('textColorInput');
+        const fontSizeInput = document.getElementById('fontSizeInput');
+        const clearButton = document.getElementById('clearButton');
+        const downloadButton = document.getElementById('downloadButton');
+        const textInput = document.getElementById('textInput');
+        const addTextButton = document.getElementById('addTextButton');
+        const logoList = document.querySelector('.logo-list');
+
+        let img = new Image();
+        let logo = new Image();
+        let isDraggingText = false;
+        let isDraggingLogo = false;
+        let dragOffset = { x: 0, y: 0 };
+        let textElements = [];
+        let logoPosition = { x: 50, y: 50 }; // Default logo position
+        let selection = null;
+
+        // Load main image
+        fileInput.addEventListener('change', (event) => {
+            const file = event.target.files[0];
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    img.src = e.target.result;
+                };
+                reader.readAsDataURL(file);
+            }
+        });
+
+        img.onload = () => {
+            draw();
+        };
+
+        // Handle logo selection from the list
+        logoList.addEventListener('click', (event) => {
+            if (event.target.tagName === 'IMG') {
+                logo.src = event.target.src;
+                draw();
+            }
+        });
+
+        logo.onload = () => {
+            draw();
+        };
+
+        // Change background color
+        colorInput.addEventListener('input', () => {
+            draw();
+        });
+
+        // Clear canvas
+        clearButton.addEventListener('click', () => {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            textElements = [];
+            selection = null; // Clear selection
+            logoPosition = { x: 50, y: 50 }; // Reset logo position
+            draw();
+        });
+
+        // Add text
+        addTextButton.addEventListener('click', () => {
+            const text = textInput.value;
+            const fontSize = fontSizeInput.value; // Get font size
+            if (text) {
+                const textObj = {
+                    text: text,
+                    x: 50,
+                    y: 50,
+                    color: textColorInput.value, // Store text color
+                    fontSize: fontSize // Store font size
+                };
+                textElements.push(textObj);
+                draw();
+                textInput.value = '';
+            }
+        });
+
+        function draw() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+            ctx.globalCompositeOperation = 'source-atop';
+            ctx.fillStyle = colorInput.value;
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            ctx.globalCompositeOperation = 'source-over'; // Reset to default
+
+            // Draw text
+            textElements.forEach(element => {
+                ctx.fillStyle = element.color; // Use specific text color
+                ctx.font = `${element.fontSize}px Arial`; // Set font size
+                ctx.fillText(element.text, element.x, element.y);
+            });
+
+            // Draw logo
+            if (logo.src) {
+                ctx.drawImage(logo, logoPosition.x, logoPosition.y, 60, 60); // Draw logo with fixed size
+            }
+        }
+
+        // Download canvas as an image
+        downloadButton.addEventListener('click', () => {
+            const tempCanvas = document.createElement('canvas');
+            const tempCtx = tempCanvas.getContext('2d');
+            tempCanvas.width = canvas.width;
+            tempCanvas.height = canvas.height;
+
+            tempCtx.fillStyle = 'white';
+            tempCtx.fillRect(0, 0, tempCanvas.width, tempCanvas.height);
+            tempCtx.drawImage(canvas, 0, 0);
+
+            const link = document.createElement('a');
+            link.download = 'canvas-image.jpeg'; // Change to JPEG
+            link.href = tempCanvas.toDataURL('image/jpeg'); // Set format to JPEG
+            link.click();
+        });
+
+        // Handle dragging text
+        canvas.addEventListener('mousedown', (e) => {
+            const mouseX = e.offsetX;
+            const mouseY = e.offsetY;
+
+            textElements.forEach((element, index) => {
+                ctx.font = `${element.fontSize}px Arial`;
+                const textWidth = ctx.measureText(element.text).width;
+                const textHeight = element.fontSize;
+
+                if (mouseX >= element.x && mouseX <= element.x + textWidth &&
+                    mouseY >= element.y - textHeight && mouseY <= element.y) {
+                    isDraggingText = true;
+                    selection = index; // Set the selected index
+                    dragOffset.x = mouseX - element.x;
+                    dragOffset.y = mouseY - element.y;
+                }
+            });
+        });
+
+        canvas.addEventListener('mouseup', () => {
+            isDraggingText = false;
+        });
+
+        canvas.addEventListener('mousemove', (e) => {
+            if (isDraggingText && selection !== null) {
+                const mouseX = e.offsetX;
+                const mouseY = e.offsetY;
+                textElements[selection].x = mouseX - dragOffset.x;
+                textElements[selection].y = mouseY - dragOffset.y;
+                draw();
+            }
+        });
+
+        // Handle dragging logo
+        canvas.addEventListener('mousedown', (e) => {
+            const mouseX = e.offsetX;
+            const mouseY = e.offsetY;
+
+            if (mouseX >= logoPosition.x && mouseX <= logoPosition.x + 60 &&
+                mouseY >= logoPosition.y && mouseY <= logoPosition.y + 60) {
+                isDraggingLogo = true;
+                dragOffset.x = mouseX - logoPosition.x;
+                dragOffset.y = mouseY - logoPosition.y;
+            }
+        });
+
+        canvas.addEventListener('mouseup', () => {
+            isDraggingLogo = false;
+        });
+
+        canvas.addEventListener('mousemove', (e) => {
+            if (isDraggingLogo) {
+                const mouseX = e.offsetX;
+                const mouseY = e.offsetY;
+                logoPosition.x = mouseX - dragOffset.x;
+                logoPosition.y = mouseY - dragOffset.y;
+                draw();
+            }
+        });
+    </script>
+</body>
+</html>
